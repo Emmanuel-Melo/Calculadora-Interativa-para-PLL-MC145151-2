@@ -7,10 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <!-- Chosen Palette: Cool Gray & Electric Blue -->
-    <!-- Application Structure Plan: A single-page, task-oriented dashboard. It features an introduction, an interactive calculator as the main tool, and a collapsible explanation section. The user inputs their project's frequencies, and the app calculates and visually displays the required DIP switch settings for the R and N dividers. This structure transforms the static report into a dynamic, practical tool, which is more user-friendly and effective for electronics enthusiasts and technicians who need immediate, customized results for their circuits. -->
-    <!-- Visualization & Content Choices: Report Info: Technical data and formulas for the MC145151-2. Goal: Enable users to calculate switch settings. Viz/Presentation Method: Interactive form for inputs (frequencies). Outputs are displayed as text (R and N values) and, crucially, as visual representations of DIP switches using styled HTML/CSS to show 'Aberto'/'Fechado' states. This visual feedback is more intuitive than a table of 1s and 0s. Interaction: User fills form, clicks 'Calcular', and JS logic updates the output section and switch visuals. Input validation and error messages are included. Justification: This approach turns a passive document into an active tool, directly mapping calculated data to the physical task the user must perform. Library/Method: Vanilla JS for logic, Tailwind CSS for styling. NO SVG/Mermaid. -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -43,12 +39,13 @@
                         <input type="number" id="f-crystal" value="2048" class="mt-1 block w-full bg-slate-50 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="f-out" class="block text-sm font-medium text-slate-700">Frequência de Saída Desejada ($$f_{OUT}$$) em kHz</label>
-                        <input type="number" id="f-out" value="5321" class="mt-1 block w-full bg-slate-50 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <label for="f-step" class="block text-sm font-medium text-slate-700">Resolução / Passo do Canal ($$f_{R}$$)</label>
+                        <select id="f-step" class="mt-1 block w-full bg-slate-50 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </select>
                     </div>
                     <div>
-                        <label for="f-step" class="block text-sm font-medium text-slate-700">Resolução / Passo do Canal ($$f_{R}$$) em kHz</label>
-                        <input type="number" id="f-step" value="1" class="mt-1 block w-full bg-slate-50 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <label for="f-out" class="block text-sm font-medium text-slate-700">Frequência de Saída Desejada ($$f_{OUT}$$) em kHz</label>
+                        <input type="number" id="f-out" value="5321" class="mt-1 block w-full bg-slate-50 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
                         Calcular Configuração
@@ -68,10 +65,10 @@
                     <details>
                         <summary class="text-xl font-bold cursor-pointer hover:text-blue-600">Entenda o Cálculo</summary>
                         <div class="mt-4 text-sm text-slate-600 space-y-2">
-                            <p>O cálculo segue as fórmulas fundamentais do datasheet:</p>
-                            <div class="p-2 bg-slate-100 rounded-md">1. **Divisor de Referência (R):** $$R = \frac{f_{CRISTAL}}{f_{R}}$$</div>
-                            <div class="p-2 bg-slate-100 rounded-md">2. **Divisor Programável (N):** $$N = \frac{f_{OUT}}{f_{R}}$$</div>
-                            <p>A ferramenta calcula R e N e os converte para a configuração binária dos switches.</p>
+                            <p>As fórmulas fundamentais do datasheet são:</p>
+                            <div class="p-2 bg-slate-100 rounded-md">1. **Frequência de Referência:** $$f_R = \frac{f_{CRISTAL}}{R}$$</div>
+                            <div class="p-2 bg-slate-100 rounded-md">2. **Frequência de Saída:** $$f_{OUT} = N \times f_R$$</div>
+                            <p>A ferramenta usa estes princípios para encontrar os valores de R e N.</p>
                         </div>
                     </details>
                 </div>
@@ -81,13 +78,10 @@
                 <h2 class="text-2xl font-bold mb-4 border-b pb-2">Resultados e Configuração</h2>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Memorial de Cálculo -->
                     <div id="calculation-memorial" class="space-y-4">
                          <h3 class="text-xl font-bold mb-3">Memorial de Cálculo</h3>
-                         <!-- Gerado por JS -->
                     </div>
 
-                    <!-- Configuração dos Switches -->
                     <div>
                         <h3 class="text-xl font-bold mb-3">Configuração dos Switches</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-center">
@@ -121,6 +115,9 @@
 
     <script>
         const form = document.getElementById('pll-form');
+        const fCrystalInput = document.getElementById('f-crystal');
+        const fStepSelect = document.getElementById('f-step');
+        const fOutInput = document.getElementById('f-out');
         const errorMessage = document.getElementById('error-message');
         const resultsSection = document.getElementById('results-section');
         
@@ -133,7 +130,7 @@
         const calculationMemorialContainer = document.getElementById('calculation-memorial');
 
         const rDividerTable = {
-            8:    '000', 128:  '001', 256:  '010', 512:  '011',
+            8: '000', 128: '001', 256: '010', 512: '011',
             1024: '100', 2048: '101', 2410: '110', 8192: '111'
         };
         const validRValues = Object.keys(rDividerTable).map(Number);
@@ -151,6 +148,41 @@
                 </div>
             `;
         }
+
+        function updateFrOptions() {
+            const fCrystal = parseFloat(fCrystalInput.value);
+            if (isNaN(fCrystal) || fCrystal <= 0) {
+                fStepSelect.innerHTML = '<option>Insira uma frequência de cristal válida</option>';
+                return;
+            }
+
+            const currentSelectedFr = fStepSelect.value;
+            fStepSelect.innerHTML = ''; 
+
+            let closestOption = null;
+            let smallestDiff = Infinity;
+
+            validRValues.forEach(r => {
+                const fr = fCrystal / r;
+                const option = document.createElement('option');
+                option.value = fr;
+                option.textContent = `${fr.toFixed(4)} kHz (R=${r})`;
+                option.dataset.rValue = r;
+                fStepSelect.appendChild(option);
+
+                const diff = Math.abs(fr - currentSelectedFr);
+                if (diff < smallestDiff) {
+                    smallestDiff = diff;
+                    closestOption = option;
+                }
+            });
+
+            if (closestOption) {
+                closestOption.selected = true;
+            } else if (fStepSelect.options.length > 5) {
+                fStepSelect.selectedIndex = 5; // Default to R=2048 if available
+            }
+        }
         
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -158,34 +190,35 @@
             errorMessage.classList.add('hidden');
             errorMessage.textContent = '';
 
-            const fCrystal = parseFloat(document.getElementById('f-crystal').value);
-            const fOut = parseFloat(document.getElementById('f-out').value);
-            const fStep = parseFloat(document.getElementById('f-step').value);
+            const fCrystal = parseFloat(fCrystalInput.value);
+            const fOut = parseFloat(fOutInput.value);
+            const fStep = parseFloat(fStepSelect.value);
 
-            if (isNaN(fCrystal) || isNaN(fOut) || isNaN(fStep) || fCrystal <= 0 || fOut <= 0 || fStep <= 0) {
-                showError("Por favor, insira valores numéricos positivos em todos os campos.");
+            const selectedOption = fStepSelect.options[fStepSelect.selectedIndex];
+            if (!selectedOption) {
+                showError("Por favor, selecione um passo de canal válido.");
                 return;
             }
+            const r = parseInt(selectedOption.dataset.rValue, 10);
 
-            const calculatedR = fCrystal / fStep;
+            if (isNaN(fOut) || fOut <= 0) {
+                showError("Por favor, insira um valor de saída positivo.");
+                return;
+            }
             
-            if (!validRValues.includes(calculatedR)) {
-                 showError(`O valor de R calculado (${calculatedR}) não é um valor válido para o CI. Valores de passo válidos para este cristal são: ${validRValues.map(v => (fCrystal / v).toFixed(2)).join(', ')} kHz.`);
-                return;
-            }
-
             if (fOut % fStep !== 0) {
-                showError(`A frequência de saída (${fOut} kHz) deve ser um múltiplo do passo do canal (${fStep} kHz).`);
-                return;
+                 const roundedFOut = Math.round(fOut / fStep) * fStep;
+                 showError(`A frequência de saída (${fOut} kHz) não é um múltiplo do passo (${fStep.toFixed(4)} kHz). O valor mais próximo seria ${roundedFOut.toFixed(4)} kHz.`);
+                 return;
             }
 
             const calculatedN = fOut / fStep;
             if (calculatedN < 3 || calculatedN > 16383) {
-                showError(`O valor de N calculado (${calculatedN}) está fora da faixa permitida (3 a 16383). Ajuste a frequência de saída ou o passo.`);
+                showError(`O valor de N calculado (${calculatedN.toFixed(2)}) está fora da faixa permitida (3 a 16383). Ajuste a frequência de saída.`);
                 return;
             }
 
-            displayResults(fCrystal, fOut, fStep, calculatedR, calculatedN);
+            displayResults(fCrystal, fOut, fStep, r, calculatedN);
         });
 
         function showError(message) {
@@ -195,52 +228,54 @@
         }
         
         function displayResults(fCrystal, fOut, fStep, r, n) {
+            const integerN = Math.round(n);
             rValueEl.textContent = r;
-            nValueEl.textContent = n;
+            nValueEl.textContent = integerN;
 
-            const nBinary = n.toString(2).padStart(14, '0');
+            const nBinary = integerN.toString(2).padStart(14, '0');
             nBinaryValueEl.textContent = nBinary;
 
             const rBinary = rDividerTable[r];
 
-            // Display R switches
-            rSwitchesContainer.innerHTML = '';
-            rSwitchesContainer.innerHTML += createSwitch('RA2', rBinary[0]);
-            rSwitchesContainer.innerHTML += createSwitch('RA1', rBinary[1]);
-            rSwitchesContainer.innerHTML += createSwitch('RA0', rBinary[2]);
+            rSwitchesContainer.innerHTML = createSwitch('RA2', rBinary[0]) + createSwitch('RA1', rBinary[1]) + createSwitch('RA0', rBinary[2]);
             
-            // Display N switches
             nSwitchesContainer.innerHTML = '';
             for (let i = 0; i < 14; i++) {
-                const pinNumber = 13 - i;
-                nSwitchesContainer.innerHTML += createSwitch(`N${pinNumber}`, nBinary[i]);
+                nSwitchesContainer.innerHTML += createSwitch(`N${13 - i}`, nBinary[i]);
             }
 
-            // Display Calculation Memorial
             calculationMemorialContainer.innerHTML = `
                 <h3 class="text-xl font-bold mb-3">Memorial de Cálculo</h3>
                 <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                    <p class="font-semibold">1. Cálculo do Divisor de Referência (R)</p>
-                    <p>$$R = \\frac{f_{CRISTAL}}{f_{R}} = \\frac{${fCrystal} \\text{ kHz}}{${fStep} \\text{ kHz}} = ${r}$$</p>
+                    <p class="font-semibold">1. Divisor de Referência (R)</p>
+                    <p>Você selecionou o passo de $$f_R = ${fStep.toFixed(4)} \\text{ kHz}$$, que corresponde a um valor de divisor de:</p>
+                    <p>$$R = ${r}$$</p>
                 </div>
                 <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                    <p class="font-semibold">2. Cálculo do Divisor Programável (N)</p>
-                    <p>$$N = \\frac{f_{OUT}}{f_{R}} = \\frac{${fOut} \\text{ kHz}}{${fStep} \\text{ kHz}} = ${n}$$</p>
+                    <p class="font-semibold">2. Divisor Programável (N)</p>
+                    <p>$$N = \\frac{f_{OUT}}{f_{R}} = \\frac{${fOut} \\text{ kHz}}{${fStep.toFixed(4)} \\text{ kHz}} = ${integerN}$$</p>
                 </div>
                  <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
                     <p class="font-semibold">3. Conversão de N para Binário</p>
-                    <p>$$N_{10} = ${n} \\rightarrow N_2 = ${nBinary}$$</p>
+                    <p>$$N_{10} = ${integerN} \\rightarrow N_2 = ${nBinary}$$</p>
                 </div>
             `;
             
             if (window.MathJax) {
-                MathJax.typesetPromise([calculationMemorialContainer]);
+                MathJax.typesetPromise([calculationMemorialContainer]).catch(err => console.log('MathJax error:', err));
             }
 
             resultsSection.classList.remove('hidden');
         }
         
-        // Initial calculation on page load
+        fCrystalInput.addEventListener('input', () => {
+            updateFrOptions();
+            form.dispatchEvent(new Event('submit'));
+        });
+        fStepSelect.addEventListener('change', () => form.dispatchEvent(new Event('submit')));
+        
+        // Initial setup
+        updateFrOptions();
         form.dispatchEvent(new Event('submit'));
     </script>
 </body>
