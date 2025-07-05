@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Interativa para PLL MC145151-2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- Chosen Palette: Cool Gray & Electric Blue -->
+    <!-- Application Structure Plan: A single-page, task-oriented dashboard. It features an introduction, an interactive calculator as the main tool, and a collapsible explanation section. The user inputs their project's frequencies, and the app calculates and visually displays the required DIP switch settings for the R and N dividers. This structure transforms the static report into a dynamic, practical tool, which is more user-friendly and effective for electronics enthusiasts and technicians who need immediate, customized results for their circuits. -->
+    <!-- Visualization & Content Choices: Report Info: Technical data and formulas for the MC145151-2. Goal: Enable users to calculate switch settings. Viz/Presentation Method: Interactive form for inputs (frequencies). Outputs are displayed as text (R and N values) and, crucially, as visual representations of DIP switches using styled HTML/CSS to show 'Aberto'/'Fechado' states. This visual feedback is more intuitive than a table of 1s and 0s. Interaction: User fills form, clicks 'Calcular', and JS logic updates the output section and switch visuals. Input validation and error messages are included. Justification: This approach turns a passive document into an active tool, directly mapping calculated data to the physical task the user must perform. Library/Method: Vanilla JS for logic, Tailwind CSS for styling. NO SVG/Mermaid. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        mjx-container {
+            text-align: left !important;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-900">Calculadora para Sintetizador PLL MC145151-2</h1>
+            <p class="mt-2 text-slate-600">Uma ferramenta interativa baseada no relatório técnico para configurar seu CI.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-1 border-b pb-2">Parâmetros do Circuito</h2>
+                <p class="text-sm text-slate-500 mb-4">Insira os valores do seu projeto para calcular a configuração dos switches.</p>
+                
+                <form id="pll-form" class="space-y-4">
+                    <div>
+                        <label for="f-crystal" class="block text-sm font-medium text-slate-700">Frequência do Cristal ($$f_{CRISTAL}$$) em kHz</label>
+                        <input type="number" id="f-crystal" value="2048" class="mt-1 block w-full bg-slate-50 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="f-out" class="block text-sm font-medium text-slate-700">Frequência de Saída Desejada ($$f_{OUT}$$) em kHz</label>
+                        <input type="number" id="f-out" value="5321" class="mt-1 block w-full bg-slate-50 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="f-step" class="block text-sm font-medium text-slate-700">Resolução / Passo do Canal ($$f_{R}$$) em kHz</label>
+                        <input type="number" id="f-step" value="1" class="mt-1 block w-full bg-slate-50 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                        Calcular Configuração
+                    </button>
+                </form>
+                <div id="error-message" class="mt-4 text-red-600 font-medium hidden"></div>
+            </div>
+
+            <div class="lg:col-span-1 space-y-8">
+                 <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold mb-2 border-b pb-2">Sobre a Ferramenta</h2>
+                    <p class="text-slate-600 text-sm">
+                        Esta aplicação traduz o relatório técnico do CI **MC145151-2** em uma ferramenta prática. Ela automatiza o cálculo dos divisores **R** e **N** e mostra visualmente como configurar os switches físicos para obter a frequência de saída desejada no seu projeto de rádio ou sintetizador.
+                    </p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <details>
+                        <summary class="text-xl font-bold cursor-pointer hover:text-blue-600">Entenda o Cálculo</summary>
+                        <div class="mt-4 text-sm text-slate-600 space-y-2">
+                            <p>O cálculo segue as fórmulas fundamentais do datasheet:</p>
+                            <div class="p-2 bg-slate-100 rounded-md">1. **Divisor de Referência (R):** $$R = \frac{f_{CRISTAL}}{f_{R}}$$</div>
+                            <div class="p-2 bg-slate-100 rounded-md">2. **Divisor Programável (N):** $$N = \frac{f_{OUT}}{f_{R}}$$</div>
+                            <p>A ferramenta calcula R e N e os converte para a configuração binária dos switches.</p>
+                        </div>
+                    </details>
+                </div>
+            </div>
+            
+            <div id="results-section" class="lg:col-span-3 bg-white p-6 rounded-xl shadow-lg hidden">
+                <h2 class="text-2xl font-bold mb-4 border-b pb-2">Resultados e Configuração</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Memorial de Cálculo -->
+                    <div id="calculation-memorial" class="space-y-4">
+                         <h3 class="text-xl font-bold mb-3">Memorial de Cálculo</h3>
+                         <!-- Gerado por JS -->
+                    </div>
+
+                    <!-- Configuração dos Switches -->
+                    <div>
+                        <h3 class="text-xl font-bold mb-3">Configuração dos Switches</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-center">
+                            <div class="bg-slate-100 p-4 rounded-lg">
+                                <h3 class="font-bold text-slate-600">Divisor R</h3>
+                                <p id="r-value" class="text-2xl font-bold text-blue-600"></p>
+                            </div>
+                            <div class="bg-slate-100 p-4 rounded-lg">
+                                <h3 class="font-bold text-slate-600">Divisor N</h3>
+                                <p id="n-value" class="text-2xl font-bold text-blue-600"></p>
+                            </div>
+                             <div class="bg-slate-100 p-4 rounded-lg">
+                                <h3 class="font-bold text-slate-600">N (Binário)</h3>
+                                <p id="n-binary-value" class="text-lg md:text-xl font-mono text-blue-600 break-all"></p>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-semibold mb-3">Switches do Divisor R (RA0-RA2)</h4>
+                            <div id="r-switches" class="grid grid-cols-3 gap-3"></div>
+                        </div>
+                        <div class="mt-6">
+                            <h4 class="text-lg font-semibold mb-3">Switches do Divisor N (N0-N13)</h4>
+                            <div id="n-switches" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const form = document.getElementById('pll-form');
+        const errorMessage = document.getElementById('error-message');
+        const resultsSection = document.getElementById('results-section');
+        
+        const rValueEl = document.getElementById('r-value');
+        const nValueEl = document.getElementById('n-value');
+        const nBinaryValueEl = document.getElementById('n-binary-value');
+        
+        const rSwitchesContainer = document.getElementById('r-switches');
+        const nSwitchesContainer = document.getElementById('n-switches');
+        const calculationMemorialContainer = document.getElementById('calculation-memorial');
+
+        const rDividerTable = {
+            8:    '000', 128:  '001', 256:  '010', 512:  '011',
+            1024: '100', 2048: '101', 2410: '110', 8192: '111'
+        };
+        const validRValues = Object.keys(rDividerTable).map(Number);
+
+        function createSwitch(name, state) {
+            const stateText = state === '1' ? 'Aberto' : 'Fechado';
+            const stateColor = state === '1' ? 'bg-green-500' : 'bg-slate-500';
+            
+            return `
+                <div class="flex flex-col items-center justify-center p-3 rounded-lg bg-slate-100 border border-slate-200">
+                    <div class="font-bold text-slate-800">${name}</div>
+                    <div class="mt-1 text-xs font-semibold text-white px-3 py-1 rounded-full ${stateColor}">
+                        ${stateText} (${state})
+                    </div>
+                </div>
+            `;
+        }
+        
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            errorMessage.classList.add('hidden');
+            errorMessage.textContent = '';
+
+            const fCrystal = parseFloat(document.getElementById('f-crystal').value);
+            const fOut = parseFloat(document.getElementById('f-out').value);
+            const fStep = parseFloat(document.getElementById('f-step').value);
+
+            if (isNaN(fCrystal) || isNaN(fOut) || isNaN(fStep) || fCrystal <= 0 || fOut <= 0 || fStep <= 0) {
+                showError("Por favor, insira valores numéricos positivos em todos os campos.");
+                return;
+            }
+
+            const calculatedR = fCrystal / fStep;
+            
+            if (!validRValues.includes(calculatedR)) {
+                 showError(`O valor de R calculado (${calculatedR}) não é um valor válido para o CI. Valores de passo válidos para este cristal são: ${validRValues.map(v => (fCrystal / v).toFixed(2)).join(', ')} kHz.`);
+                return;
+            }
+
+            if (fOut % fStep !== 0) {
+                showError(`A frequência de saída (${fOut} kHz) deve ser um múltiplo do passo do canal (${fStep} kHz).`);
+                return;
+            }
+
+            const calculatedN = fOut / fStep;
+            if (calculatedN < 3 || calculatedN > 16383) {
+                showError(`O valor de N calculado (${calculatedN}) está fora da faixa permitida (3 a 16383). Ajuste a frequência de saída ou o passo.`);
+                return;
+            }
+
+            displayResults(fCrystal, fOut, fStep, calculatedR, calculatedN);
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+        }
+        
+        function displayResults(fCrystal, fOut, fStep, r, n) {
+            rValueEl.textContent = r;
+            nValueEl.textContent = n;
+
+            const nBinary = n.toString(2).padStart(14, '0');
+            nBinaryValueEl.textContent = nBinary;
+
+            const rBinary = rDividerTable[r];
+
+            // Display R switches
+            rSwitchesContainer.innerHTML = '';
+            rSwitchesContainer.innerHTML += createSwitch('RA2', rBinary[0]);
+            rSwitchesContainer.innerHTML += createSwitch('RA1', rBinary[1]);
+            rSwitchesContainer.innerHTML += createSwitch('RA0', rBinary[2]);
+            
+            // Display N switches
+            nSwitchesContainer.innerHTML = '';
+            for (let i = 0; i < 14; i++) {
+                const pinNumber = 13 - i;
+                nSwitchesContainer.innerHTML += createSwitch(`N${pinNumber}`, nBinary[i]);
+            }
+
+            // Display Calculation Memorial
+            calculationMemorialContainer.innerHTML = `
+                <h3 class="text-xl font-bold mb-3">Memorial de Cálculo</h3>
+                <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p class="font-semibold">1. Cálculo do Divisor de Referência (R)</p>
+                    <p>$$R = \\frac{f_{CRISTAL}}{f_{R}} = \\frac{${fCrystal} \\text{ kHz}}{${fStep} \\text{ kHz}} = ${r}$$</p>
+                </div>
+                <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p class="font-semibold">2. Cálculo do Divisor Programável (N)</p>
+                    <p>$$N = \\frac{f_{OUT}}{f_{R}} = \\frac{${fOut} \\text{ kHz}}{${fStep} \\text{ kHz}} = ${n}$$</p>
+                </div>
+                 <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p class="font-semibold">3. Conversão de N para Binário</p>
+                    <p>$$N_{10} = ${n} \\rightarrow N_2 = ${nBinary}$$</p>
+                </div>
+            `;
+            
+            if (window.MathJax) {
+                MathJax.typesetPromise([calculationMemorialContainer]);
+            }
+
+            resultsSection.classList.remove('hidden');
+        }
+        
+        // Initial calculation on page load
+        form.dispatchEvent(new Event('submit'));
+    </script>
+</body>
+</html>
